@@ -3,6 +3,7 @@
 var React = require('react');
 
 var {
+  ActivityIndicator,
   ListView,
   Platform,
   TouchableHighlight,
@@ -27,8 +28,6 @@ function MergeRecursive(obj1, obj2) {
   }
   return obj1;
 }
-
-var GiftedSpinner = require('react-native-gifted-spinner');
 
 var GiftedListView = React.createClass({
 
@@ -102,7 +101,7 @@ var GiftedListView = React.createClass({
 
     return (
       <View style={[this.defaultStyles.paginationView, this.props.customStyles.paginationView]}>
-        <GiftedSpinner />
+        <ActivityIndicator animating />
       </View>
     );
   },
@@ -174,6 +173,29 @@ var GiftedListView = React.createClass({
     );
   },
 
+  appendRows(rows, options = {}) {
+    var mergedRows = this._getRows().concat(rows || []);
+    this._updateRows(mergedRows, options, false /* changeRefreshing */);
+  },
+
+  prependRows(rows, options = {}) {
+    var mergedRows = (rows || []).concat(this._getRows());
+    this._updateRows(mergedRows, options, false /* changeRefreshing */);
+  },
+
+  clearRows() {
+    this._updateRows([]);
+  },
+
+  resetToFirstLoad() {
+    this._updateRows([]);
+    this.setState({ paginationStatus: 'firstLoad' });
+
+    if(this.isMounted()) {
+      this.componentDidMount();
+    }
+  },
+
   getInitialState() {
     this._setPage(1);
     this._setRows([]);
@@ -207,10 +229,6 @@ var GiftedListView = React.createClass({
 
   setNativeProps(props) {
     this.refs.listview.setNativeProps(props);
-  },
-
-  _refresh() {
-    this._onRefresh({external: true});
   },
 
   _onRefresh(options = {}) {
@@ -252,29 +270,29 @@ var GiftedListView = React.createClass({
     if(this.props.distinctRows){
       mergedRows = this.props.distinctRows(mergedRows);
     }
-    
+
     this._updateRows(mergedRows, options);
   },
 
-  _updateRows(rows = [], options = {}) {
+  _updateRows(rows = [], options = {}, changeRefreshing = true) {
     if (rows !== null) {
       this._setRows(rows);
       if (this.props.withSections === true) {
         this.setState({
           dataSource: this.state.dataSource.cloneWithRowsAndSections(rows),
-          isRefreshing: false,
+          isRefreshing: changeRefreshing ? false : this.state.isRefreshing,
           paginationStatus: (options.allLoaded === true ? 'allLoaded' : 'waiting'),
         });
       } else {
         this.setState({
           dataSource: this.state.dataSource.cloneWithRows(rows),
-          isRefreshing: false,
+          isRefreshing: changeRefreshing ? false : this.state.isRefreshing,
           paginationStatus: (options.allLoaded === true ? 'allLoaded' : 'waiting'),
         });
       }
     } else {
       this.setState({
-        isRefreshing: false,
+        isRefreshing: changeRefreshing ? false : this.state.isRefreshing,
         paginationStatus: (options.allLoaded === true ? 'allLoaded' : 'waiting'),
       });
     }
